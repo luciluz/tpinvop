@@ -6,6 +6,11 @@ from recordclass import recordclass
 TOLERANCE =10e-6 
 Orden = recordclass('Orden', 'id beneficio cant_trab')
 
+# Coeficientes de restricciones deseables:
+# Escribir los costos en negativo, como aparecerán en la función objetivo
+costo_por_conflicto = 0 
+costo_por_repeticion = 0
+
 class InstanciaAsignacionCuadrillas:
     def __init__(self):
         self.cantidad_trabajadores = 0
@@ -145,7 +150,7 @@ def agregar_variables(prob, instancia):
                 ub.append(1)
                 types.append("B")  
     
-                            # Variables y_ik
+    # Variables y_ik
     for i in range(N):          # 1 si el trabajador k es asignado a la orden i
         for k in range(T):      # 0 c.c.
             coeficientes_funcion_objetivo.append(0)  
@@ -162,7 +167,7 @@ def agregar_variables(prob, instancia):
         ub.append(1)
         types.append("B")        
         
-    # variables d_hk
+    # variables d_jk
     for j in range(dias):
         for k in range(T):
             coeficientes_funcion_objetivo.append(0)  
@@ -170,6 +175,59 @@ def agregar_variables(prob, instancia):
             lb.append(0)
             ub.append(1)
             types.append("B")
+
+    # # variables C_i_k_k*
+    for i in range(N):
+        for k in range(trabajadores):
+            for k in range(trabajadores):
+                coeficientes_funcion_objetivo.append(costo_por_conflicto)  
+                nombres.append(f"C_{i}_{k}_{k}")
+                lb.append(0)
+                ub.append(1)
+                types.append("B")
+                
+    # variables R_i_i*_k
+    for i in range(N):
+        for i in range(N):
+            for k in range(trabajadores):
+                coeficientes_funcion_objetivo.append(costo_por_repeticion)  
+                nombres.append(f"R_{i}_{i}_{k}")
+                lb.append(0)
+                ub.append(1)
+                types.append("B")
+                
+    # variables P_k
+    for i in range(T):
+        coeficientes_funcion_objetivo.append(-1)  
+        nombres.append(f"P_{k}")
+        lb.append(0)
+        ub.append(40500)
+        types.append("B")
+        
+    # variables p_k_num
+    for k in range(T):
+        for num in range(3): #las primeras tres van entre 0 y 5
+            coeficientes_funcion_objetivo.append(0)  
+            nombres.append(f"p_{k}_num}")
+            lb.append(0)
+            ub.append(5)
+            types.append("B")
+        
+        # La ultima va de 0 a 15.
+        coeficientes_funcion_objetivo.append(0)  
+        nombres.append(f"p_{k}_3") # esto funciona no?
+        lb.append(0)
+        ub.append(15)
+        types.append("B")
+        
+    # y variables f_k_num
+    for k in range(T):   
+        for num in range(3):
+            coeficientes_funcion_objetivo.append(0)  
+            nombres.append(f"f_{k}_{num}") 
+            lb.append(0)
+            ub.append(1)
+            types.append("B")    
             
     # Agregar todas las variables
     prob.variables.add(obj=coeficientes_funcion_objetivo, lb = lb, ub = ub, types=types, names=nombres)
