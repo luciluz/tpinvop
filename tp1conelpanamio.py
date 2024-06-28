@@ -113,39 +113,66 @@ def agregar_variables(prob, instancia):
     # Poner nombre a las variables
     coeficientes_funcion_objetivo = []
     nombres = []
+    lb = []
+    ub = []
     types = []
     
     for i in range(N):          # Variables A_ijhk
         for j in range(dias):       # 1 si la orden i se realiza el día j en el turno h por el trabajador k
             for h in range(turnos): # 0 c.c.
                 for k in range(T):
-                    coeficientes_funcion_objetivo.append(0) # wtf is this?
-                    nombres.append(f"A_{i+1}_{j+1}_{h+1}_{k+1}")
+                    coeficientes_funcion_objetivo.append(0) 
+                    nombres.append(f"A_{i}_{j}_{h}_{k}")
+                    lb.append(0)
+                    ub.append(1)
                     types.append("B")  # esto le dice que la variable es binaria
     
     for i in range(N):          # Variables X_ijh:
         for j in range(dias):       # 1 si la orden i se realiza el dia j en el turno h
             for h in range(turnos): # 0 c.c.
-                coeficientes_funcion_objetivo.append(0) # me parece que esto es para las  restric. deseables? o función obj?
-                nombres.append(f"x_{i+1}_{j+1}_{h+1}")
+                coeficientes_funcion_objetivo.append(0)
+                nombres.append(f"x_{i}_{j}_{h}")
+                lb.append(0)
+                ub.append(1)
                 types.append("B")  # binarias
     
     for j in range(dias):       # Variables w_jhk:
         for h in range(turnos):     # 1 si el trabajador k trabaja en el día j en el turno h
             for k in range(T):      # 0 c.c.
-                coeficientes_funcion_objetivo.append(0)  # igual capaz es la función obj 
-                nombres.append(f"w_{j+1}_{h+1}_{k+1}")
-                types.append("B")  # qe poco progre
+                coeficientes_funcion_objetivo.append(0)  
+                nombres.append(f"w_{j}_{h}_{k}")
+                lb.append(0)
+                ub.append(1)
+                types.append("B")  
     
                             # Variables y_ik
     for i in range(N):          # 1 si el trabajador k es asignado a la orden i
         for k in range(T):      # 0 c.c.
-            coeficientes_funcion_objetivo.append(0)  # la verdad ni idea para qué es esto :P
-            nombres.append(f"y_{i+1}_{k+1}")
+            coeficientes_funcion_objetivo.append(0)  
+            nombres.append(f"y_{i}_{k}")
+            lb.append(0)
+            ub.append(1)
             types.append("B")  # abajo el binarismo
-    
+            
+    # variables z_i
+    for i in range(N):
+        coeficientes_funcion_objetivo(instancia.ordenes[i].beneficio)
+        nombres.append(f"z_{i}")
+        lb.append(0)
+        ub.append(1)
+        types.append("B")        
+        
+    # variables d_hk
+    for j in range(dias):
+        for k in range(T):
+            coeficientes_funcion_objetivo.append(0)  
+            nombres.append(f"d_{j}_{k}")
+            lb.append(0)
+            ub.append(1)
+            types.append("B")
+            
     # Agregar todas las variables
-    prob.variables.add(obj=coeficientes_funcion_objetivo, lb = [0]*cantVar, ub = [1]*cantVar, types=types, names=nombres)
+    prob.variables.add(obj=coeficientes_funcion_objetivo, lb = lb, ub = ub, types=types, names=nombres)
 
 
 def agregar_restricciones(prob, instancia):
@@ -171,37 +198,71 @@ def agregar_restricciones(prob, instancia):
                 for h in range(turnos):
                     for k in range(T):
                         # 3*A_ijhk - x_ijh - w_jhk - y_ik <= 0
-                        indices = [f"A_{i+1}_{j+1}_{h+1}_{k+1}", f"x_{i+1}_{j+1}_{h+1}", f"w_{j+1}_{h+1}_{k+1}", f"y_{i+1}_{k+1}"]
+                        indices = [f"A_{i}_{j}_{h}_{k}", f"x_{i}_{j}_{h}", f"w_{j}_{h}_{k}", f"y_{i}_{k}"]
                         valores = [3, -1, -1, -1]  # coeficientes de las variables de arriba
                         prob.linear_constraints.add(
                             lin_expr=[[indices, valores]],
                             senses=['L'],  # L es <=, G es >=, E es ==
                             rhs=[0],
-                            names=[f"coherencia1_{i+1}_{j+1}_{h+1}_{k+1}"]
+                            names=[f"coherencia1_{i}_{j}_{h}_{k}"]
                         )
                         
                         # -A_ijhk + x_ijh + w_jhk + y_ik <= 2
-                        indices = [f"A_{i+1}_{j+1}_{h+1}_{k+1}", f"x_{i+1}_{j+1}_{h+1}", f"w_{j+1}_{h+1}_{k+1}", f"y_{i+1}_{k+1}"]
+                        indices = [f"A_{i}_{j}_{h}_{k}", f"x_{i}_{j}_{h}", f"w_{j}_{h}_{k}", f"y_{i}_{k}"]
                         valores = [-1, 1, 1, 1]  
                         prob.linear_constraints.add(
                             lin_expr=[[indices, valores]],
                             senses=['L'],
                             rhs=[2],
-                            names=[f"coherencia2_{i+1}_{j+1}_{h+1}_{k+1}"]
+                            names=[f"coherencia2_{i}_{j}_{h}_{k}"]
                         )
+                        
+    # que las variables z_i tengan coherencia con las x_ijh
+    for i in range(N):
+        indices = [f"z_{i}"] + [f"x_{i}_{j}_{h}" for j in range(dias) for h in range(turnos)]
+        valores = [1] + [-1]*(dias*turnos)
+        prob.linear_constraints.add(
+                lin_expr=[[indices,valores]],
+                senses=['E'],
+                rhs=[0],
+                names=[f"coherencia3_{i}"]
+            )
+        
+    # que las variables d_jk tengan coherencia con las w_jhk
+    for j in range(dias):
+        for k in range(T):
+            indices = [f"d_{j}_{k}"] + [f"w_{j}_{h}_{k}" for h in range(turnos)]
+            valores = [1] - [-1]*turnos
+            prob.linear_constraints.add(
+                    lin_expr=[[indices,valores]],
+                    senses=['G'],
+                    rhs=[0],
+                    names=[f"coherencia4_{j}_{k}"]
+                )
+            
+    for j in range(dias):
+        for k in range(T):
+            indices = [f"d_{j}_{k}"] + [f"w_{j}_{h}_{k}" for h in range(turnos)]
+            valores = [5] - [-1]*turnos
+            prob.linear_constraints.add(
+                    lin_expr=[[indices,valores]],
+                    senses=['L'],
+                    rhs=[0],
+                    names=[f"coherencia5_{i}"]
+                )
     
     # Si una orden se realiza, entonces debe tener exactamente t_i (ordenes[i]) trabajadores asignados
     for i in range(N):
         for j in range(dias):
             for h in range(turnos):
                 # t_i*x_ijh == Σ_k A_ijhk
-                indices = [f"x_{i+1}_{j+1}_{h+1}"] + [f"A_{i+1}_{j+1}_{h+1}_{k+1}" for k in range(T)]
-                valores = [ordenes[i]] + [-1] * T  # coeficientes de las variables de arriba
+                indices = [f"x_{i}_{j}_{h}"] + [f"A_{i}_{j}_{h}_{k}" for k in range(T)]
+                valores = [instancia.ordenes[i].cant_trab] + [-1] * T  # coeficientes de las variables de arriba
                 prob.linear_constraints.add(
                     lin_expr=[[indices, valores]],
                     senses=['E'],  # L es <=, G es >=, E es ==
                     rhs=[0],
-                    names=[f"restriccion1_{i+1}_{j+1}_{h+1}"] # no se me ocurrió otro nombre 
+                    names=[f"restriccion1_{i}_{j}_{h}"] # no se me ocurrió otro nombre 
                 )
                     
     # Cada orden de trabajo puede ser asignada a lo sumo a un turno
