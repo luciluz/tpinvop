@@ -248,10 +248,10 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices,valores]],
                     senses=['L'],
                     rhs=[0],
-                    names=[f"coherencia5_{i}"]
+                    names=[f"coherencia5_{j}_{k}"]
                 )
     
-    # Si una orden se realiza, entonces debe tener exactamente t_i (ordenes[i]) trabajadores asignados
+    # Si una orden se realiza, entonces debe tener exactamente t_i trabajadores asignados
     for i in range(N):
         for j in range(dias):
             for h in range(turnos):
@@ -266,12 +266,50 @@ def agregar_restricciones(prob, instancia):
                 )
                     
     # Cada orden de trabajo puede ser asignada a lo sumo a un turno
+    for i in range(N):
+        indices = [f"x_{i}_{j}_{h}" for j in range(dias) for h in range(turnos)]
+        valores = [1]*(dias*turnos)
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[1],
+            names=[f"restriccion7_{i}"] 
+        )
     
     # Un mismo trabajador no puede estar asignado a dos ordenes en un mismo turno
+    for i in range(N):
+        indices = [f"A_{i}_{j}_{h}_{k}" for j in range(dias) for h in range(turnos) for k in range(T)]
+        valores = [1]*(dias*turnos*T)
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[1],
+            names=[f"restriccion8_{i}"] 
+        )
+    
     
     # Cada trabajador tiene que tener a lo sumo un día en el que no trabaje
+    for k in range(T):
+        indices = [f"d_{j}_{k}" for j in range(dias)]
+        valores = [1]*dias
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[5],
+            names=[f"restriccion9_{k}"] 
+        )
     
     # Ningún trabajador puede estar asignado a una tarea en los 5 turnos de un mismo día
+    for j in range(dias):
+        for k in range(T):
+            indices = [f"w_{j}_{h}_{k}" for h in range(turnos)]
+            valores = [1]*turnos
+            prob.linear_constraints.add(
+                lin_expr=[[indices, valores]],
+                senses=['L'],
+                rhs=[4],
+                names=[f"restriccion9_{j}_{k}"] 
+            )
     
     # Hay pares de órdenes que no pueden ser satisfechas consecutivamente el mismo día (por ej si están alejadas geográficamente)
     
