@@ -2,7 +2,7 @@ import sys
 #importamos el modulo cplex
 import cplex
 from recordclass import recordclass
-#%%
+
 TOLERANCE =10e-6 
 Orden = recordclass('Orden', 'id beneficio cant_trab')
 
@@ -15,6 +15,10 @@ class InstanciaAsignacionCuadrillas:
         self.ordenes_correlativas = []
         self.ordenes_conflictivas = []
         self.ordenes_repetitivas = []
+        self.dias = 6
+        self.turnos = 5
+        self.costo_por_conflicto = 0        #Aca definimos los costos por conflicto y repeticion
+        self.costo_por_repeticion = 0       #Definimos los valores como negativos (como queremos que aparezcan en FO)
         
     def leer_datos(self,nombre_archivo):
 
@@ -86,11 +90,13 @@ def agregar_variables(prob, instancia):
     
     T = instancia.cantidad_trabajadores
     N = instancia.cantidad_ordenes
-    dias = 6
-    turnos = 5
+    dias = instancia.dias
+    turnos = instancia.turnos
+    costo_por_conflicto = instancia.costo_por_conflicto
+    costo_por_repeticion = instancia.costo_por_repeticion
     
     # Llenar coef\_funcion\_objetivo
-    coeficientes_funcion_objetivo = .... # no sé bien que es esto
+    #coeficientes_funcion_objetivo = .... # no sé bien que es esto
 
     # Poner nombre a las variables
     coeficientes_funcion_objetivo = []
@@ -159,8 +165,8 @@ def agregar_variables(prob, instancia):
             
     # # variables C_i_k_k*
     for i in range(N):
-        for k1 in range(trabajadores):
-            for k2 in range(trabajadores):
+        for k1 in range(T):
+            for k2 in range(T):
                 coeficientes_funcion_objetivo.append(costo_por_conflicto)  
                 nombres.append(f"C_{i}_{k1}_{k2}")
                 lb.append(0)
@@ -170,7 +176,7 @@ def agregar_variables(prob, instancia):
     # variables R_i_i*_k
     for i1 in range(N):
         for i2 in range(N):
-            for k in range(trabajadores):
+            for k in range(T):
                 coeficientes_funcion_objetivo.append(costo_por_repeticion)  
                 nombres.append(f"R_{i1}_{i2}_{k}")
                 lb.append(0)
@@ -215,6 +221,11 @@ def agregar_variables(prob, instancia):
 
 
 def agregar_restricciones(prob, instancia):        
+    N = instancia.cantidad_ordenes
+    T = instancia.cantidad_trabajadores
+    dias = instancia.dias
+    turnos = instancia.turnos
+    
     # Que los A tengan coherencia con las demás variables
     # A_ijhk <--> (x_ijh ∧ w_jhk ∧ y_ik)  para todo i,j,h,k
     # es decir:
@@ -349,8 +360,8 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[1],
-                    names=[f"restriccion11_{(a,b)}_{j}_{h}"]
-                }
+                    names=[f"restriccion11_{a}_{b}_{j}_{h}"]
+                )
                     
                     
                 # para restringir que a esté después de b    
@@ -360,8 +371,8 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[1],
-                    names=[f"restriccion12_{(b,a)}_{j}_{h}"]
-                }
+                    names=[f"restriccion12_{b}_{a}_{j}_{h}"]
+                )
         
     # Hay pares de órdenes que deben ser resueltas consecutivamente el mismo día
     for a, b in instancia.ordenes_correlativas:
@@ -374,8 +385,8 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[0],
-                    names=[f"restriccion13_{(a,b)}_{j}_{h}"]
-                }
+                    names=[f"restriccion13_{a}_{b}_{j}_{h}"]
+                )
                 
                 
         # si se cumple b quiero que a también
@@ -385,8 +396,8 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['G'],
             rhs=[0],
-            names=[f"restriccion14_{(a,b)}"]
-        }
+            names=[f"restriccion14_{a}_{b}"]
+        )
         
         # que tarea a nunca se pueda hacer el último turno de cualquier día
         indices = [f"x_{a}_{j}_{5}" for j in range(dias)]
@@ -395,8 +406,8 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['E'],
             rhs=[0],
-            names=[f"restriccion15_{(a,b)}"]
-        }
+            names=[f"restriccion15_{a}_{b}"]
+        )
     
     # La diferencia entre el trabajador con más órdenes (x) y el con menos (y) tiene que ser menor o igual a 8 (x-y<=8)
     for k1 in range(T):
@@ -408,8 +419,8 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[8],
-                    names=[f"restriccion16_{(k1,2k)}"]
-                }
+                    names=[f"restriccion16_{k1}_{k2}"]
+                )
     
     # El esquema de remuneraciones debe ponerse como restricciones
     
@@ -417,27 +428,27 @@ def agregar_restricciones(prob, instancia):
         # Conflictos entre trabajadores que hacen que prefieran no ser asignados a la misma orden
         # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador
                     
-     for k1, k2 in instancia.ordenes_conflictivas:
+    for k1, k2 in instancia.ordenes_conflictivas:
         for i in range(N):
-            indices = [f"y_{i}_{k1}", f"y_{i}_{k2}", f"C_{i}_{k1}_{k2]"] 
+            indices = [f"y_{i}_{k1}", f"y_{i}_{k2}", f"C_{i}_{k1}_{k2}"] 
             valores = [1, 1, -1]
             prob.linear_constraints.add(
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion17_{(k1,k2)}_{i}"]
-                }
+            names=[f"restriccion17_{k1}_{k2}_{i}"]
+                )
                 
     for i1, i2 in instancia.ordenes_repetitivas:
         for k in range(T):
-            indices = [f"y_{i1}_{k}", f"y_{i2}_{k}", f"R_{i1}_{i2}_{k]"] 
+            indices = [f"y_{i1}_{k}", f"y_{i2}_{k}", f"R_{i1}_{i2}_{k}"] 
             valores = [1, 1, -1]
             prob.linear_constraints.add(
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion18_{(i1,i2)}_{k}"]
-                }
+            names=[f"restriccion18_{i1}_{i2}_{k}"]
+                )
 
 def armar_lp(prob, instancia):
 
@@ -448,7 +459,7 @@ def armar_lp(prob, instancia):
     agregar_restricciones(prob, instancia)
 
     # Setear el sentido del problema
-    prob.objective.set_sense(prob.objective.sense.....)
+    prob.objective.set_sense(prob.objective.sense.maximize)
 
     # Escribir el lp a archivo
     prob.write('asignacionCuadrillas.lp')
@@ -456,12 +467,12 @@ def armar_lp(prob, instancia):
 def resolver_lp(prob):
     
     # Definir los parametros del solver
-    prob.parameters....
+    # prob.parameters....
        
     # Resolver el lp
     prob.solve()
 
-#def mostrar_solucion(prob,instancia):
+def mostrar_solucion(prob,instancia):
     # Obtener informacion de la solucion a traves de 'solution'
     
     # Tomar el estado de la resolucion
@@ -475,7 +486,7 @@ def resolver_lp(prob):
     # Tomar los valores de las variables
     x  = prob.solution.get_values()
     # Mostrar las variables con valor positivo (mayor que una tolerancia)
-    .....
+    #.....
 
 def main():
     
