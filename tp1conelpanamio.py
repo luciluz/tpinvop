@@ -416,6 +416,28 @@ def agregar_restricciones(prob, instancia):
     # Las siguientes son las restricciones deseables, sólo las haremos una vez tengamos el resto del modelo y veamos que funciona
         # Conflictos entre trabajadores que hacen que prefieran no ser asignados a la misma orden
         # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador
+                    
+     for k1, k2 in instancia.ordenes_conflictivas:
+        for i in range(N):
+            indices = [f"y_{i}_{k1}", f"y_{i}_{k2}", f"C_{i}_{k1}_{k2]"] 
+            valores = [1, 1, -1]
+            prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion17_{(k1,k2)}_{i}"]
+                }
+                
+    for i1, i2 in instancia.ordenes_repetitivas:
+        for k in range(T):
+            indices = [f"y_{i1}_{k}", f"y_{i2}_{k}", f"R_{i1}_{i2}_{k]"] 
+            valores = [1, 1, -1]
+            prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion18_{(i1,i2)}_{k}"]
+                }
 
 def armar_lp(prob, instancia):
 
