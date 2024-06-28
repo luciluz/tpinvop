@@ -83,29 +83,11 @@ def cargar_instancia():
     return instancia
 
 def agregar_variables(prob, instancia):
-    # Definir y agregar las variables:
-    # Variables x_ijhk 
-        
-	# metodo 'add' de 'variables', con parametros:
-	# obj: costos de la funcion objetivo
-	# lb: cotas inferiores
-    # ub: cotas superiores
-    # types: tipo de las variables
-    # names: nombre (como van a aparecer en el archivo .lp)
     
     T = instancia.cantidad_trabajadores
     N = instancia.cantidad_ordenes
     dias = 6
     turnos = 5
-    
-    # cantidad de cada una de los tipos de variables
-    var_A = N*dias*turnos*T	
-    var_x = N*dias*turnos
-    var_w = dias*turnos*T
-    var_y = N*T
-    
-    # cantidad total de variables
-    cantVar = var_A + var_x + var_w + var_y
     
     # Llenar coef\_funcion\_objetivo
     coeficientes_funcion_objetivo = .... # no sé bien que es esto
@@ -117,7 +99,9 @@ def agregar_variables(prob, instancia):
     ub = []
     types = []
     
-    for i in range(N):          # Variables A_ijhk
+    
+    # Variables A_ijhk
+    for i in range(N):          
         for j in range(dias):       # 1 si la orden i se realiza el día j en el turno h por el trabajador k
             for h in range(turnos): # 0 c.c.
                 for k in range(T):
@@ -127,16 +111,18 @@ def agregar_variables(prob, instancia):
                     ub.append(1)
                     types.append("B")  # esto le dice que la variable es binaria
     
-    for i in range(N):          # Variables X_ijh:
+    # Variables X_ijh:
+    for i in range(N):          
         for j in range(dias):       # 1 si la orden i se realiza el dia j en el turno h
             for h in range(turnos): # 0 c.c.
                 coeficientes_funcion_objetivo.append(0)
                 nombres.append(f"x_{i}_{j}_{h}")
                 lb.append(0)
                 ub.append(1)
-                types.append("B")  # binarias
+                types.append("B")
     
-    for j in range(dias):       # Variables w_jhk:
+    # Variables w_jhk:
+    for j in range(dias):       
         for h in range(turnos):     # 1 si el trabajador k trabaja en el día j en el turno h
             for k in range(T):      # 0 c.c.
                 coeficientes_funcion_objetivo.append(0)  
@@ -145,9 +131,9 @@ def agregar_variables(prob, instancia):
                 ub.append(1)
                 types.append("B")  
     
-                            # Variables y_ik
-    for i in range(N):          # 1 si el trabajador k es asignado a la orden i
-        for k in range(T):      # 0 c.c.
+    # Variables y_ik                        
+    for i in range(N):          
+        for k in range(T):      
             coeficientes_funcion_objetivo.append(0)  
             nombres.append(f"y_{i}_{k}")
             lb.append(0)
@@ -210,7 +196,7 @@ def agregar_variables(prob, instancia):
         
         # La ultima va de 0 a 15.
         coeficientes_funcion_objetivo.append(0)  
-        nombres.append(f"p_{k}_3") # esto funciona no?
+        nombres.append(f"p_{k}_3") 
         lb.append(0)
         ub.append(15)
         types.append("B")
@@ -228,19 +214,7 @@ def agregar_variables(prob, instancia):
     prob.variables.add(obj=coeficientes_funcion_objetivo, lb = lb, ub = ub, types=types, names=nombres)
 
 
-def agregar_restricciones(prob, instancia):
-    # Agregar las restricciones ax <= (>= ==) b:
-	# funcion 'add' de 'linear_constraints' con parametros:
-	# lin_expr: lista de listas de [ind,val] de a
-    # sense: lista de 'L', 'G' o 'E'
-    # rhs: lista de los b
-    # names: nombre (como van a aparecer en el archivo .lp)
-	
-    # Notar que cplex espera "una matriz de restricciones", es decir, una
-    # lista de restricciones del tipo ax <= b, [ax <= b]. Por lo tanto, aun cuando
-    # agreguemos una unica restriccion, tenemos que hacerlo como una lista de un unico
-    # elemento.
-        
+def agregar_restricciones(prob, instancia):        
     # Que los A tengan coherencia con las demás variables
     # A_ijhk <--> (x_ijh ∧ w_jhk ∧ y_ik)  para todo i,j,h,k
     # es decir:
@@ -304,7 +278,7 @@ def agregar_restricciones(prob, instancia):
                     names=[f"coherencia5_{j}_{k}"]
                 )
     
-    # Si una orden se realiza, entonces debe tener exactamente t_i (ordenes[i]) trabajadores asignados
+    # Si una orden se realiza, entonces debe tener exactamente t_i trabajadores asignados
     for i in range(N):
         for j in range(dias):
             for h in range(turnos):
@@ -361,14 +335,81 @@ def agregar_restricciones(prob, instancia):
                 lin_expr=[[indices, valores]],
                 senses=['L'],
                 rhs=[4],
-                names=[f"restriccion9_{j}_{k}"] 
+                names=[f"restriccion10_{j}_{k}"] 
             )
     
     # Hay pares de órdenes que no pueden ser satisfechas consecutivamente el mismo día (por ej si están alejadas geográficamente)
-    
+    for a, b in instancia.ordenes_conflictivas:
+        for j in range(dias):
+            for h in range(turnos-1):
+                # para restringir que b esté después de a
+                indices = [f"x_{b}_{j}_{h}", f"x_{a}_{j}_{h+1}"]
+                valores = [1,1]
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['L'],
+                    rhs=[1],
+                    names=[f"restriccion11_{(a,b)}_{j}_{h}"]
+                }
+                    
+                    
+                # para restringir que a esté después de b    
+                indices = [f"x_{a}_{j}_{h}", f"x_{b}_{j}_{h+1}"]
+                valores = [1, 1]
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['L'],
+                    rhs=[1],
+                    names=[f"restriccion12_{(b,a)}_{j}_{h}"]
+                }
+        
     # Hay pares de órdenes que deben ser resueltas consecutivamente el mismo día
+    for a, b in instancia.ordenes_correlativas:
+        for j in range(dias):
+            for h in range(turnos-1):
+                # para restringir que b esté después de a    
+                indices = [f"x_{a}_{j}_{h}", f"x_{b}_{j}_{h+1}"]
+                valores = [1, -1]
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['L'],
+                    rhs=[0],
+                    names=[f"restriccion13_{(a,b)}_{j}_{h}"]
+                }
+                
+                
+        # si se cumple b quiero que a también
+        indices = [f"z_{a}", f"z_{b}"]
+        valores = [1, -1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['G'],
+            rhs=[0],
+            names=[f"restriccion14_{(a,b)}"]
+        }
+        
+        # que tarea a nunca se pueda hacer el último turno de cualquier día
+        indices = [f"x_{a}_{j}_{5}" for j in range(dias)]
+        valores = [1]*dias
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['E'],
+            rhs=[0],
+            names=[f"restriccion15_{(a,b)}"]
+        }
     
     # La diferencia entre el trabajador con más órdenes (x) y el con menos (y) tiene que ser menor o igual a 8 (x-y<=8)
+    for k1 in range(T):
+        for k2 in range(T):
+            if k1 != k2:
+                indices = [f"y_{i}_{k1}" for i in range(N)] + [f"y_{i}_{k2}" for i in range(N)]
+                valores = [1]*N + [-1]*N
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['L'],
+                    rhs=[8],
+                    names=[f"restriccion16_{(k1,2k)}"]
+                }
     
     # El esquema de remuneraciones debe ponerse como restricciones
     
