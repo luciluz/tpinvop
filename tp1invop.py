@@ -470,7 +470,6 @@ def armar_lp(prob, instancia):
 def resolver_lp(prob):
     
     # Definir los parametros del solver
-    prob.parameters.timelimit = 5
        
     # Resolver el lp
     prob.solve()
