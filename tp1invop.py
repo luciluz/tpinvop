@@ -155,7 +155,7 @@ def agregar_variables(prob, instancia):
         ub.append(1)
         types.append("B")        
         
-    # variables d_hk
+    # variables d_jk
     for j in range(dias):
         for k in range(T):
             coeficientes_funcion_objetivo.append(0)  
