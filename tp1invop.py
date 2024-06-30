@@ -351,7 +351,19 @@ def agregar_restricciones(prob, instancia):
             rhs=[dias - 1],
             names=[f"TrabajadorTieneFranco_{k}"] 
         )
-    
+        
+    #Una orde debe tener a todos los trabajadores asignados al mismo tiempo
+    for i in range(N):
+        for j in range(dias):
+            for h in range(turnos):
+                indices = [f"x_{i}_{j}_{k}"] + [f"A_{i}_{j}_{h}_{k}" for k in range(T)]
+                valores = [int(instancia.ordenes[i].cant_trab)] + [1]*N
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['E'],
+                    rhs=[0],
+                    names=[f"TrabajadoresAlMimoTiempo_{i}"] 
+                )    
     # Ningún trabajador puede estar asignado a una tarea en los 5 turnos de un mismo día
     for j in range(dias):
         for k in range(T):
