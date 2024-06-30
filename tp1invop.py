@@ -424,14 +424,102 @@ def agregar_restricciones(prob, instancia):
                 )
     
     # El esquema de remuneraciones debe ponerse como restricciones
+     # El esquema de remuneraciones debe ponerse como restricciones
+    
+    #Se pagan todas las tareas completadas
+    for k in range(T):
+        indices = [f"p_{num}_{k}" for num in range (4)] + [f"y_{i}_{k}" for i in range(N)]
+        valores = [1]*4 + [-1]*N 
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['E'],
+            rhs=[0],
+            names=[f"restriccion17_{k}"]
+        )
+        
+    #P_k = 1000p_k0 + 1200p_k1 + 1400_p_k3 + 1500p_k4   
+    for k in range(T):
+        indices = [f"P_{k}"] + [f"p_{num}_{k}" for num in range (4)] 
+        valores = [1, -1000, -1200, -1400, -1500]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['E'],
+            rhs=[0],
+            names=[f"restriccion18_{k}"]
+        )
+    
+    #Agrego restricciones para la integralidad de p_k0  a p_k4
+    for k in range(T):
+        indices = [f"f_{k}_{0}", f"p_{k}_{1}"]   # 5f_k0 <= p_k0 
+        valores = [5, -1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{1}"]
+        )
+        indices = [f"p_{k}_{0}"]                # p_k0 <= 5
+        valores = [1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[5],
+            names=[f"restriccion19_{k}_{2}"]
+        )
+        indices = [f"f_{k}_{1}", f"p_{k}_{1}"]  # 5f_k1 <= p_k1 
+        valores = [5, -1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{3}"]
+        )
+        indices = [f"p_{k}_{1}", f"p_{k}_{0}"]   # p_k1 <= 5f_k0
+        valores = [1, -5]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{4}"]
+        )
+        indices = [f"f_{k}_{2}", f"p_{k}_{2}"]  # 5f_k2 <= p_k2 
+        valores = [5, -1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{5}"]
+        )
+        indices = [f"p_{k}_{0}", f"p_{k}_{1}"]   # p_k2 <= 5f_k1
+        valores = [1, -5]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{6}"]
+        )
+        indices = [f"p_{k}_{3}"]                 # 0 <= p_k3 
+        valores = [1]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['G'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{7}"]
+        )
+        indices = [f"p_{k}_{0}", f"p_{k}_{2}"]   # p_k3 <= 15f_k2
+        valores = [1, -15]
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['L'],
+            rhs=[0],
+            names=[f"restriccion19_{k}_{8}"]
+        )
     
     # Las siguientes son las restricciones deseables, sólo las haremos una vez tengamos el resto del modelo y veamos que funciona
         # Conflictos entre trabajadores que hacen que prefieran no ser asignados a la misma orden
-        # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador
-                    
-    
     # ACÁ SE ESTÁ INDEXANDO MAL. k1 y k2 son ordenes no podemos indexarlas como trabajadores
-    for k1, k2 in instancia.ordenes_conflictivas:
+    
+    for k1, k2 in instancia.conflictos_trabajadores:
         for i in range(N):
             indices = [f"y_{i}_{k1}", f"y_{i}_{k2}", f"C_{i}_{k1}_{k2}"] 
             valores = [1, 1, -1]
@@ -441,7 +529,8 @@ def agregar_restricciones(prob, instancia):
             rhs=[0],
             names=[f"restriccion17_{k1}_{k2}_{i}"]
                 )
-                
+            
+         # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador       
     for i1, i2 in instancia.ordenes_repetitivas:
         for k in range(T):
             indices = [f"y_{i1}_{k}", f"y_{i2}_{k}", f"R_{i1}_{i2}_{k}"] 
