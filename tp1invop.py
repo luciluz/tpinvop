@@ -527,7 +527,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion17_{k1}_{k2}_{i}"]
+            names=[f"restriccionDeseable1_{k1}_{k2}_{i}"]
                 )
             
          # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador       
@@ -539,7 +539,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion18_{i1}_{i2}_{k}"]
+            names=[f"restriccionDeseable2_{i1}_{i2}_{k}"]
                 )
 
 def armar_lp(prob, instancia):
