@@ -275,7 +275,7 @@ def agregar_restricciones(prob, instancia):
             valores = [1] + [-1]*turnos
             prob.linear_constraints.add(
                     lin_expr=[[indices,valores]],
-                    senses=['G'],
+                    senses=['L'],
                     rhs=[0],
                     names=[f"coherencia d_{j}_{k} (1)"]
                 )
@@ -286,26 +286,38 @@ def agregar_restricciones(prob, instancia):
             valores = [5] + [-1]*turnos
             prob.linear_constraints.add(
                     lin_expr=[[indices,valores]],
-                    senses=['L'],
+                    senses=['G'],
                     rhs=[0],
                     names=[f"coherencia d_{j}_{k} (2)"]
                 )
             
     # Si una orden se realiza, entonces debe tener exactamente t_i trabajadores asignados
-    for i in range(N):
-        for j in range(dias):
-            for h in range(turnos):
+    
+    #for i in range(N):
+    #    for j in range(dias):
+    #        for h in range(turnos):
                 # t_i*x_ijh == Σ_k A_ijhk
-                indices = [f"x_{i}_{j}_{h}"] + [f"A_{i}_{j}_{h}_{k}" for k in range(T)]
-                valores = [int(instancia.ordenes[i].cant_trab)] + [-1] * T  # coeficientes de las variables de arriba
-                prob.linear_constraints.add(
-                    lin_expr=[[indices, valores]],
-                    senses=['E'],  # L es <=, G es >=, E es ==
-                    rhs=[0],
-                    names=[f"Cumple trabajadores_{i}_{j}_{h}"] 
-                )
+    #            indices = [f"x_{i}_{j}_{h}"] + [f"A_{i}_{j}_{h}_{k}" for k in range(T)]
+    #            valores = [int(instancia.ordenes[i].cant_trab)] + [-1] * T  # coeficientes de las variables de arriba
+    #            prob.linear_constraints.add(
+    #                lin_expr=[[indices, valores]],
+    #                senses=['E'],  # L es <=, G es >=, E es ==
+    #                rhs=[0],
+    #                names=[f"Cumple trabajadores_{i}_{j}_{h}"] 
+    #            )
+                
+    # otra manera (más simple?)
+    for i in range(N):
+        indices = [f"z_{i}"] + [f"y_{i}_{k}" for k in range(T)]
+        valores = [int(instancia.ordenes[i].cant_trab)] + [-1] * T
+        prob.linear_constraints.add(
+            lin_expr=[[indices, valores]],
+            senses=['E'],  # L es <=, G es >=, E es ==
+            rhs=[0],
+            names=[f"Cumple trabajadores_{i}"]
+        )
                   
-    # Cada orden de trabajo puede ser asignada a lo sumo a un turno
+    # Cada orden de trabajo puede ser asignada a lo sumo a un turno    
     for i in range(N):
         indices = [f"x_{i}_{j}_{h}" for j in range(dias) for h in range(turnos)]
         valores = [1]*(dias*turnos)
@@ -317,16 +329,17 @@ def agregar_restricciones(prob, instancia):
         )
     
     # Un mismo trabajador no puede estar asignado a dos ordenes en un mismo turno
-    for i in range(N):
-        indices = [f"A_{i}_{j}_{h}_{k}" for j in range(dias) for h in range(turnos) for k in range(T)]
-        valores = [1]*(dias*turnos*T)
-        prob.linear_constraints.add(
-            lin_expr=[[indices, valores]],
-            senses=['L'],
-            rhs=[1],
-            names=[f"TrabajadorNoSeDuplica_{i}"] 
-        )
-    
+    for j in range(dias):
+        for h in range(turnos):
+            for k in range(T):
+                indices = [f"A_{i}_{j}_{h}_{k}" for i in range(N)]
+                valores = [1]*N
+                prob.linear_constraints.add(
+                    lin_expr=[[indices, valores]],
+                    senses=['L'],
+                    rhs=[1],
+                    names=[f"TrabajadorNoSeDuplica_{i}"] 
+                )    
     
     # Cada trabajador tiene que tener a lo sumo un día en el que no trabaje
     for k in range(T):
@@ -335,7 +348,7 @@ def agregar_restricciones(prob, instancia):
         prob.linear_constraints.add(
             lin_expr=[[indices, valores]],
             senses=['L'],
-            rhs=[5],
+            rhs=[dias - 1],
             names=[f"TrabajadorTieneFranco_{k}"] 
         )
     
@@ -347,7 +360,7 @@ def agregar_restricciones(prob, instancia):
             prob.linear_constraints.add(
                 lin_expr=[[indices, valores]],
                 senses=['L'],
-                rhs=[4],
+                rhs=[turnos - 1],
                 names=[f"TrabajadorDescansaUnTurno_{j}_{k}"] 
             )
     
@@ -355,7 +368,7 @@ def agregar_restricciones(prob, instancia):
     for a, b in instancia.ordenes_conflictivas:
         for j in range(dias):
             for h in range(turnos-1):
-                # para restringir que b esté después de a
+                # para restringir que b no esté después de a
                 indices = [f"x_{b}_{j}_{h}", f"x_{a}_{j}_{h+1}"]
                 valores = [1,1]
                 prob.linear_constraints.add(
@@ -366,7 +379,7 @@ def agregar_restricciones(prob, instancia):
                 )
                     
                     
-                # para restringir que a esté después de b    
+                # para restringir que a no esté después de b    
                 indices = [f"x_{a}_{j}_{h}", f"x_{b}_{j}_{h+1}"]
                 valores = [1, 1]
                 prob.linear_constraints.add(
@@ -585,7 +598,13 @@ def mostrar_solucion(prob,instancia):
     x  = prob.solution.get_values()
     # Mostrar las variables con valor positivo (mayor que una tolerancia)
     #.....
-
+    
+def imprimir_z_i_P_k(prob):
+    for i, nombre in enumerate(prob.variables.get_names()):
+        if nombre.startswith('z_') or nombre.startswith('P_'):
+            valor = prob.solution.get_values(i)
+            print(f"{nombre}: {valor}")
+            
 def main():
 
     # Lectura de datos desde el archivo de entrada
@@ -599,6 +618,9 @@ def main():
 
     # Resolucion del modelo
     resolver_lp(prob)
+    
+    # Imprimir los valores de las variables z_i y P_k
+    imprimir_z_i_P_k(prob)
 
     # Obtencion de la solucion
     mostrar_solucion(prob,instancia)
