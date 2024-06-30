@@ -244,7 +244,7 @@ def agregar_restricciones(prob, instancia):
                             lin_expr=[[indices, valores]],
                             senses=['L'],  # L es <=, G es >=, E es ==
                             rhs=[0],
-                            names=[f"coherencia1_{i}_{j}_{h}_{k}"]
+                            names=[f"coherencias A_{i}_{j}_{h}_{k} (1)"]
                         )
                         
                         # -A_ijhk + x_ijh + w_jhk + y_ik <= 2
@@ -254,7 +254,7 @@ def agregar_restricciones(prob, instancia):
                             lin_expr=[[indices, valores]],
                             senses=['L'],
                             rhs=[2],
-                            names=[f"coherencia2_{i}_{j}_{h}_{k}"]
+                            names=[f"coherencia A_{i}_{j}_{h}_{k} (2)"]
                         )
                         
     # que las variables z_i tengan coherencia con las x_ijh
@@ -265,7 +265,7 @@ def agregar_restricciones(prob, instancia):
                 lin_expr=[[indices,valores]],
                 senses=['E'],
                 rhs=[0],
-                names=[f"coherencia3_{i}"]
+                names=[f"coherencia z_{i}"]
             )
         
     # que las variables d_jk tengan coherencia con las w_jhk
@@ -277,7 +277,7 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices,valores]],
                     senses=['G'],
                     rhs=[0],
-                    names=[f"coherencia4_{j}_{k}"]
+                    names=[f"coherencia d_{j}_{k} (1)"]
                 )
             
     for j in range(dias):
@@ -288,8 +288,9 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices,valores]],
                     senses=['L'],
                     rhs=[0],
-                    names=[f"coherencia5_{j}_{k}"]
+                    names=[f"coherencia d_{j}_{k} (2)"]
                 )
+            
     # Si una orden se realiza, entonces debe tener exactamente t_i trabajadores asignados
     for i in range(N):
         for j in range(dias):
@@ -301,7 +302,7 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['E'],  # L es <=, G es >=, E es ==
                     rhs=[0],
-                    names=[f"restriccion6_{i}_{j}_{h}"] 
+                    names=[f"Cumple trabajadores_{i}_{j}_{h}"] 
                 )
                   
     # Cada orden de trabajo puede ser asignada a lo sumo a un turno
@@ -312,7 +313,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[1],
-            names=[f"restriccion7_{i}"] 
+            names=[f"Tiene Turno_{i}"] 
         )
     
     # Un mismo trabajador no puede estar asignado a dos ordenes en un mismo turno
@@ -323,7 +324,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[1],
-            names=[f"restriccion8_{i}"] 
+            names=[f"TrabajadorNoSeDuplica_{i}"] 
         )
     
     
@@ -335,7 +336,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[5],
-            names=[f"restriccion9_{k}"] 
+            names=[f"TrabajadorTieneFranco_{k}"] 
         )
     
     # Ningún trabajador puede estar asignado a una tarea en los 5 turnos de un mismo día
@@ -347,7 +348,7 @@ def agregar_restricciones(prob, instancia):
                 lin_expr=[[indices, valores]],
                 senses=['L'],
                 rhs=[4],
-                names=[f"restriccion10_{j}_{k}"] 
+                names=[f"TrabajadorDescansaUnTurno_{j}_{k}"] 
             )
     
     # Hay pares de órdenes que no pueden ser satisfechas consecutivamente el mismo día (por ej si están alejadas geográficamente)
@@ -361,7 +362,7 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[1],
-                    names=[f"restriccion11_{a}_{b}_{j}_{h}"]
+                    names=[f"OrdenesConflictivas_{a}_{b}_{j}_{h} (ida)"]
                 )
                     
                     
@@ -372,7 +373,7 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[1],
-                    names=[f"restriccion12_{b}_{a}_{j}_{h}"]
+                    names=[f"OrdenesConflictiva_{b}_{a}_{j}_{h} (vuelta)"]
                 )
         
     # Hay pares de órdenes que deben ser resueltas consecutivamente el mismo día
@@ -386,10 +387,10 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[0],
-                    names=[f"restriccion13_{a}_{b}_{j}_{h}"]
+                    names=[f"OrdenesCorrelativas_{a}_{b}_{j}_{h} (1)"]
                 )
-                
-                
+
+        
         # si se cumple b quiero que a también
         indices = [f"z_{a}", f"z_{b}"]
         valores = [1, -1]
@@ -397,7 +398,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['G'],
             rhs=[0],
-            names=[f"restriccion14_{a}_{b}"]
+            names=[f"OrdenesCorrelativas_{a}_{b} (2)"]
         )
         
         # que tarea a nunca se pueda hacer el último turno de cualquier día
@@ -407,7 +408,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['E'],
             rhs=[0],
-            names=[f"restriccion15_{a}_{b}"]
+            names=[f"OrdenesCorrelativas_{a}_{b} (2)"]
         )
     
     # La diferencia entre el trabajador con más órdenes (x) y el con menos (y) tiene que ser menor o igual a 8 (x-y<=8)
@@ -420,7 +421,7 @@ def agregar_restricciones(prob, instancia):
                     lin_expr=[[indices, valores]],
                     senses=['L'],
                     rhs=[8],
-                    names=[f"restriccion16_{k1}_{k2}"]
+                    names=[f"AsignacionParejaDeTareas_{k1}_{k2}"]
                 )
     
     # El esquema de remuneraciones debe ponerse como restricciones
@@ -434,7 +435,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['E'],
             rhs=[0],
-            names=[f"restriccion17_{k}"]
+            names=[f"SePagaAlTrabajador_{k}"]
         )
         
     #P_k = 1000p_k0 + 1200p_k1 + 1400_p_k3 + 1500p_k4   
@@ -445,7 +446,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['E'],
             rhs=[0],
-            names=[f"restriccion18_{k}"]
+            names=[f"Pagos_{k}"]
         )
     
     #Agrego restricciones para la integralidad de p_k0  a p_k4
@@ -456,7 +457,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{1}"]
+            names=[f"Pagos_{k} (2)"]
         )
         indices = [f"p_{k}_{0}"]                # p_k0 <= 5
         valores = [1]
@@ -464,7 +465,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[5],
-            names=[f"restriccion19_{k}_{2}"]
+            names=[f"Pagos_{k} (3)"]
         )
         indices = [f"f_{k}_{1}", f"p_{k}_{1}"]  # 5f_k1 <= p_k1 
         valores = [5, -1]
@@ -472,7 +473,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{3}"]
+            names=[f"Pagos_{k} (4)"]
         )
         indices = [f"p_{k}_{1}", f"p_{k}_{0}"]   # p_k1 <= 5f_k0
         valores = [1, -5]
@@ -480,7 +481,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{4}"]
+            names=[f"Pagos_{k} (5)"]
         )
         indices = [f"f_{k}_{2}", f"p_{k}_{2}"]  # 5f_k2 <= p_k2 
         valores = [5, -1]
@@ -488,7 +489,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{5}"]
+            names=[f"Pagos_{k} (6)"]
         )
         indices = [f"p_{k}_{0}", f"p_{k}_{1}"]   # p_k2 <= 5f_k1
         valores = [1, -5]
@@ -496,7 +497,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{6}"]
+            names=[f"Pagos_{k} (7)"]
         )
         indices = [f"p_{k}_{3}"]                 # 0 <= p_k3 
         valores = [1]
@@ -504,7 +505,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['G'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{7}"]
+            names=[f"Pagos_{k} (8)}"]
         )
         indices = [f"p_{k}_{0}", f"p_{k}_{2}"]   # p_k3 <= 15f_k2
         valores = [1, -15]
@@ -512,7 +513,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccion19_{k}_{8}"]
+            names=[f"Pagos_{k} (9)"]
         )
     
     # Las siguientes son las restricciones deseables, sólo las haremos una vez tengamos el resto del modelo y veamos que funciona
@@ -527,7 +528,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccionDeseable1_{k1}_{k2}_{i}"]
+            names=[f"ConflictosTrabajadores_{k1}_{k2}_{i}"]
                 )
             
          # Pares de órdenes que son repetitivas por lo que se prefiere que no sean asignadas al mismo trabajador       
@@ -539,7 +540,7 @@ def agregar_restricciones(prob, instancia):
             lin_expr=[[indices, valores]],
             senses=['L'],
             rhs=[0],
-            names=[f"restriccionDeseable2_{i1}_{i2}_{k}"]
+            names=[f"OrdenesRepetitivas_{i1}_{i2}_{k}"]
                 )
 
 def armar_lp(prob, instancia):
