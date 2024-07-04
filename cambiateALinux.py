@@ -362,7 +362,7 @@ def agregar_restricciones(prob, instancia):
         for j in range(dias):
             for h in range(turnos):
                 indices = [f"x_{i}_{j}_{h}"] + [f"A_{i}_{j}_{h}_{k}" for k in range(T)]
-                valores = [int(instancia.ordenes[i].cant_trab)] + [-1]*N
+                valores = [int(instancia.ordenes[i].cant_trab)] + [-1]*T
                 prob.linear_constraints.add(
                     lin_expr=[[indices, valores]],
                     senses=['E'],
